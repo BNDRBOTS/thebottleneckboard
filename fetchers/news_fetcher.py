@@ -1,9 +1,10 @@
+# fetchers/news_fetcher.py
 import feedparser
-from datetime import datetime
+from datetime import datetime, timezone as dt_timezone
 from newspaper import Article
 from fetchers.base import BaseFetcher
 from config import TZ, MAX_ARTICLES_PER_SOURCE, REQUEST_TIMEOUT
-from fetchers.rss_fetcher import _load_cache, _save_cache
+from fetchers.rss_fetcher import _load_cache, _save_cache, _load_feed_cache, _save_feed_cache
 import re, logging
 
 logger = logging.getLogger(__name__)
@@ -17,9 +18,14 @@ class NewsFetcher(BaseFetcher):
         if self._is_paywalled():
             return []
         try:
-            resp = self.session.get(self.rss_url, timeout=REQUEST_TIMEOUT)
-            resp.raise_for_status()
-            feed = feedparser.parse(resp.text)
+            feed_content = _load_feed_cache(self.rss_url)
+            if feed_content is None:
+                resp = self.session.get(self.rss_url, timeout=REQUEST_TIMEOUT)
+                resp.raise_for_status()
+                feed_content = resp.text
+                _save_feed_cache(self.rss_url, feed_content)
+
+            feed = feedparser.parse(feed_content)
         except Exception as e:
             logger.warning(f"News fetch error {self.name}: {e}")
             return []
@@ -65,8 +71,7 @@ class NewsFetcher(BaseFetcher):
             if key in entry and entry[key]:
                 dt = datetime(*entry[key][:6])
                 if dt.tzinfo is None:
-                    dt = TZ.localize(dt)
-                else:
-                    dt = dt.astimezone(TZ)
+                    dt = dt.replace(tzinfo=dt_timezone.utc)
+                dt = dt.astimezone(TZ)
                 return dt
         return None
