@@ -9,6 +9,4 @@ def is_free_access(url, full_text=None):
         return False
     if domain in PAYWALL_DOMAINS:
         return False
-    if full_text is not None and len(full_text.strip()) < 500:
-        return False
     return True
