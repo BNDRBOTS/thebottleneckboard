@@ -106,4 +106,5 @@ if __name__ == '__main__':
     scheduler.add_job(safe_run_pipeline, 'cron', hour=6, minute=0, timezone=TZ)
     scheduler.start()
     safe_run_pipeline()
-    app.run(host='0.0.0.0', port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
