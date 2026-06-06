@@ -5,7 +5,8 @@ AI_KEYWORDS = re.compile(
     r'foundation model|generative|GPT|Claude|Gemini|Gemma|Llama|Mistral|'
     r'transformer|neural network|inference|training|compute|GPU|TPU|'
     r'safety|alignment|regulation|policy|security|misuse|chip|semiconductor|'
-    r'autonomous|agent|reasoning|multimodal|fine[- ]tuning|RLHF|RAG)\b',
+    r'autonomous|agent|reasoning|multimodal|fine[- ]tuning|RLHF|RAG|'
+    r'Codex|Copilot|GitHub Copilot|OpenAI Codex|DALL-E|Midjourney|Stable Diffusion)\b',
     re.IGNORECASE
 )
 
