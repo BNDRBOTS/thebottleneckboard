@@ -1,11 +1,10 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from config import TZ
 
 def is_same_day(article_timestamp):
     if article_timestamp.tzinfo is None:
-        article_timestamp = TZ.localize(article_timestamp)
-    else:
-        article_timestamp = article_timestamp.astimezone(TZ)
+        # assume UTC if naive
+        article_timestamp = article_timestamp.replace(tzinfo=dt_timezone.utc)
+    article_timestamp = article_timestamp.astimezone(TZ)
     now = datetime.now(TZ)
-    # Allow articles published within the last 24 hours
     return (now - article_timestamp) <= timedelta(hours=24)
