@@ -68,7 +68,13 @@ class RSSFetcher(BaseFetcher):
                 if pub_date is None:
                     continue
                 article_url = entry.get("link", "")
+                # Try to get full article text
                 full_text = self._extract_full_text(article_url)
+                # Fallback: use RSS summary if full_text is too short or empty
+                if not full_text or len(full_text.strip()) < 200:
+                    summary = entry.get("summary", "")
+                    if summary and len(summary.strip()) >= 200:
+                        full_text = summary
                 articles.append({
                     "source": self.name,
                     "title": entry.get("title", ""),
