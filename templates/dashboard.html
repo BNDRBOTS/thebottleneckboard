@@ -1,3 +1,4 @@
+<!-- templates/dashboard.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,7 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Daily Dashboard</title>
   <style>
-    /* ---------- CSS custom properties (light theme) ---------- */
     :root {
       --bg: #f4f6f8;
       --surface: #ffffff;
@@ -22,9 +22,9 @@
       --loader-bg: #e9ecef;
       --danger: #e74c3c;
       --skeleton-shine: linear-gradient(90deg, #e9ecef 25%, #f8f9fa 50%, #e9ecef 75%);
+      --header-bg: rgba(255,255,255,0.85);
+      --header-blur: 8px;
     }
-
-    /* ---------- dark theme ---------- */
     body.dark {
       --bg: #0f172a;
       --surface: #1e293b;
@@ -41,10 +41,10 @@
       --loader-bg: #334155;
       --danger: #f87171;
       --skeleton-shine: linear-gradient(90deg, #334155 25%, #475569 50%, #334155 75%);
+      --header-bg: rgba(15,23,42,0.9);
     }
-
-    /* ---------- reset & base ---------- */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       background: var(--bg);
@@ -55,50 +55,62 @@
     }
     a { color: var(--accent); text-decoration: none; }
     a:hover { text-decoration: underline; }
-
-    /* ---------- layout ---------- */
     .container {
       max-width: 960px;
       margin: 0 auto;
-      padding: 1.5rem 1rem 3rem;
+      padding: 0 1rem 3rem;
     }
-
-    /* ---------- header ---------- */
     .header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
       display: flex;
       flex-wrap: wrap;
       justify-content: space-between;
-      align-items: baseline;
-      margin-bottom: 2rem;
+      align-items: center;
+      background: var(--header-bg);
+      backdrop-filter: blur(var(--header-blur));
       border-bottom: 1px solid var(--border);
-      padding-bottom: 1rem;
+      padding: 0.75rem 0;
+      margin-bottom: 1.5rem;
     }
     h1 {
-      font-size: 1.8rem;
+      font-size: 1.6rem;
       font-weight: 700;
       color: var(--primary);
       letter-spacing: -0.5px;
+      margin-right: auto;
     }
-    .header-meta {
+    .header-controls {
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 0.75rem;
       font-size: 0.85rem;
       color: var(--text-secondary);
     }
+    .refresh-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      padding: 0.25rem 0.65rem;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .refresh-btn:hover { background: var(--accent-light); }
     .theme-toggle {
       background: none;
       border: 1px solid var(--border);
       border-radius: 8px;
       cursor: pointer;
       font-size: 1.1rem;
-      padding: 0.3rem 0.7rem;
+      padding: 0.25rem 0.65rem;
       color: var(--text);
-      transition: background 0.2s;
     }
     .theme-toggle:hover { background: var(--accent-light); }
-
-    /* ---------- skeleton loader ---------- */
     .skeleton-card {
       background: var(--surface);
       border-radius: 10px;
@@ -120,8 +132,6 @@
       0% { background-position: 200% 0; }
       100% { background-position: -200% 0; }
     }
-
-    /* ---------- articles list ---------- */
     .article-list { margin-bottom: 2rem; }
     .card {
       background: var(--surface);
@@ -176,11 +186,7 @@
       color: var(--text-secondary);
       font-style: italic;
     }
-
-    /* ---------- category sections ---------- */
-    .category-section {
-      margin-top: 2.5rem;
-    }
+    .category-section { margin-top: 2.5rem; }
     .category-title {
       font-size: 1.25rem;
       font-weight: 600;
@@ -206,8 +212,6 @@
     @media (min-width: 900px) {
       .category-grid { grid-template-columns: repeat(3, 1fr); }
     }
-
-    /* ---------- rejection log ---------- */
     .rejection-log {
       margin-top: 2rem;
       font-size: 0.8rem;
@@ -218,14 +222,11 @@
       box-shadow: var(--shadow);
     }
     .rejection-log summary { cursor: pointer; font-weight: 600; }
-
-    /* ---------- error state ---------- */
     .error-state {
       text-align: center;
       padding: 2rem;
       color: var(--danger);
     }
-
     .footer {
       text-align: center;
       margin-top: 2rem;
@@ -240,8 +241,11 @@
   <div class="container">
     <header class="header">
       <h1>AI Daily Dashboard</h1>
-      <div class="header-meta">
+      <div class="header-controls">
         <span id="generated-time">Loading…</span>
+        <button id="refresh-btn" class="refresh-btn" title="Refresh data">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+        </button>
         <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
           <svg id="theme-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="5"></circle>
@@ -257,22 +261,17 @@
         </button>
       </div>
     </header>
-
-    <!-- Skeleton loader (hidden when content loads) -->
     <div id="skeleton">
       <div class="skeleton-card"><div class="skeleton-line medium"></div><div class="skeleton-line short"></div><div class="skeleton-line"></div></div>
       <div class="skeleton-card"><div class="skeleton-line medium"></div><div class="skeleton-line short"></div><div class="skeleton-line"></div></div>
       <div class="skeleton-card"><div class="skeleton-line medium"></div><div class="skeleton-line short"></div><div class="skeleton-line"></div></div>
     </div>
-
-    <!-- Main content area -->
     <div id="main-content" style="display: none;"></div>
   </div>
-
   <script>
     (function() {
-      // ---------- theme toggle ----------
       const toggleBtn = document.getElementById('theme-toggle');
+      const refreshBtn = document.getElementById('refresh-btn');
       const body = document.body;
       const themeIcon = document.getElementById('theme-icon');
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -293,7 +292,6 @@
         }
       });
 
-      // ---------- utility: relative time ----------
       function timeAgo(isoString) {
         const now = new Date();
         const then = new Date(isoString);
@@ -306,7 +304,6 @@
         return then.toLocaleString();
       }
 
-      // ---------- category icon SVGs ----------
       const categoryIcons = {
         "Model Releases": `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>`,
         "Research Breakthroughs": `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"></path><path d="M18 20V4"></path><path d="M6 20v-4"></path></svg>`,
@@ -318,7 +315,6 @@
         "General": `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`
       };
 
-      // ---------- render article card ----------
       function renderCard(article) {
         const { rank, title, url, source, category, wordCount, densityScore, excerpt, whySelected } = article;
         const icon = categoryIcons[category] || categoryIcons["General"];
@@ -342,7 +338,6 @@
         return text.replace(/[&<>"']/g, m => map[m]);
       }
 
-      // ---------- build category sections ----------
       function buildCategorySections(data) {
         const sectionOrder = [
           "Model Releases", "Research Breakthroughs", "Regulation / Policy",
@@ -378,22 +373,15 @@
         return map[cat] || cat.replace(/\s+/g, '');
       }
 
-      // ---------- main loader ----------
       async function loadDashboard() {
         try {
           const resp = await fetch('/dashboard');
           if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
           const data = await resp.json();
-
-          // Update header timestamp
           document.getElementById('generated-time').textContent = `Updated ${timeAgo(data.generatedAt)}`;
-
-          // Hide skeleton
           document.getElementById('skeleton').style.display = 'none';
           const main = document.getElementById('main-content');
           main.style.display = 'block';
-
-          // Build top 10 list
           let html = '<div class="article-list">';
           if (data.dailyTop10 && data.dailyTop10.length) {
             html += data.dailyTop10.map(renderCard).join('');
@@ -401,11 +389,7 @@
             html += '<p>No articles passed today.</p>';
           }
           html += '</div>';
-
-          // Category sections
           html += buildCategorySections(data);
-
-          // Rejection log collapsible
           if (data.rejectionLog && data.rejectionLog.length) {
             html += `<details class="rejection-log">
               <summary>Rejection log (${data.rejectionLog.length} items)</summary>
@@ -414,16 +398,20 @@
               </ul>
             </details>`;
           }
-
           main.innerHTML = html;
         } catch (err) {
           document.getElementById('skeleton').style.display = 'none';
           document.getElementById('main-content').style.display = 'block';
-          document.getElementById('main-content').innerHTML = `<div class="error-state"><p>Dashboard unavailable: ${err.message}</p><button onclick="loadDashboard()" class="theme-toggle" style="margin-top:1rem;">Retry</button></div>`;
+          document.getElementById('main-content').innerHTML = `<div class="error-state"><p>Dashboard unavailable: ${err.message}</p><button onclick="loadDashboard()" class="refresh-btn">Retry</button></div>`;
         }
       }
 
-      // Make loadDashboard globally accessible for retry button
+      refreshBtn.addEventListener('click', () => {
+        document.getElementById('main-content').style.display = 'none';
+        document.getElementById('skeleton').style.display = 'block';
+        loadDashboard();
+      });
+
       window.loadDashboard = loadDashboard;
       loadDashboard();
     })();
