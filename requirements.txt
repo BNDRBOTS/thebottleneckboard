@@ -10,3 +10,4 @@ lxml==4.9.3
 arxiv==2.0.0
 tldextract==3.6.0
 nltk==3.8.1
+gunicorn==21.2.0
