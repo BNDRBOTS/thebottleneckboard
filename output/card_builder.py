@@ -1,5 +1,39 @@
+# output/card_builder.py
 import hashlib
 import re
+
+# Precompiled patterns
+_SENTENCE_SPLIT = re.compile(r'(?<=[.!?])\s+')
+_KEY_EVIDENCE_NUM = re.compile(r'\b\d+(?:\.\d+)?\b')
+_KEY_EVIDENCE_QUOTE = re.compile(r'"[^"]+"')
+_TIMELINE = re.compile(r'\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4}\b')
+_ACTOR_NAME = re.compile(r'\b[A-Z][a-z]+ [A-Z][a-z]+\b')
+_COMPANY = re.compile(r'\b(?:OpenAI|Anthropic|Google|Microsoft|Meta|Nvidia|Apple|Amazon|Facebook|Tesla)\b')
+_TECH_PATTERNS = [
+    re.compile(p, re.I) for p in (
+        r'\b(?:model|algorithm|architecture|training|inference|parameter|token|layer)\b',
+        r'\b\d+(?:\.\d+)?\s*%\b',
+        r'\b(?:state[- ]of[- ]the[- ]art|SOTA)\b'
+    )
+]
+_BIZ_PATTERNS = [
+    re.compile(p, re.I) for p in (
+        r'\b(?:revenue|profit|margin|cost|valuation|funding|investment|market)\b',
+        r'\$\d+(?:\.\d+)?\s*(?:billion|million|trillion)',
+        r'\b(?:enterprise|SaaS|subscription|licensing)\b'
+    )
+]
+_POLICY_PATTERNS = [
+    re.compile(p, re.I) for p in (
+        r'\b(?:regulation|policy|law|executive order|legislation|compliance|oversight)\b',
+        r'\b(?:government|federal|agency|white house|congress|parliament)\b'
+    )
+]
+_CONTRADICTION_TRANS = re.compile(r'\b(?:however|but|yet|nevertheless|on the other hand)\b', re.I)
+_ASSUMPTION = re.compile(r'\b(?:assume|presume|given that|suppose that)\b', re.I)
+_BLIND_SPOT = re.compile(r'\b(?:ignored|overlooked|failed to consider|neglected|blind spot)\b', re.I)
+_TENSION_CONTRAST = re.compile(r'\b(?:however|but|yet|contradiction|irony)\b', re.I)
+_TENSION_RISK = re.compile(r'\b(?:risk|danger|threat)\b', re.I)
 
 def build_card(article, rank):
     full_text = article.get("full_text", "")
@@ -42,19 +76,20 @@ def build_card(article, rank):
 
 def infer_category(article):
     text = article["title"] + " " + article.get("full_text", "")[:1000]
-    if any(k in text.lower() for k in ["model", "release", "launch", "announce"]):
+    lower = text.lower()
+    if any(k in lower for k in ["model", "release", "launch", "announce"]):
         return "Model Releases"
-    if any(k in text.lower() for k in ["research", "paper", "arxiv", "benchmark"]):
+    if any(k in lower for k in ["research", "paper", "arxiv", "benchmark"]):
         return "Research Breakthroughs"
-    if any(k in text.lower() for k in ["regulation", "policy", "law", "order", "federal"]):
+    if any(k in lower for k in ["regulation", "policy", "law", "order", "federal"]):
         return "Regulation / Policy"
-    if any(k in text.lower() for k in ["safety", "alignment", "risk", "pause"]):
+    if any(k in lower for k in ["safety", "alignment", "risk", "pause"]):
         return "Safety / Alignment"
-    if any(k in text.lower() for k in ["enterprise", "market", "revenue", "valuation"]):
+    if any(k in lower for k in ["enterprise", "market", "revenue", "valuation"]):
         return "Enterprise / Market Impact"
-    if any(k in text.lower() for k in ["chip", "compute", "gpu", "memory", "infrastructure"]):
+    if any(k in lower for k in ["chip", "compute", "gpu", "memory", "infrastructure"]):
         return "Infrastructure / Chips"
-    if any(k in text.lower() for k in ["security", "misuse", "hack", "attack"]):
+    if any(k in lower for k in ["security", "misuse", "hack", "attack"]):
         return "Security / Misuse"
     return "General"
 
@@ -63,97 +98,82 @@ def extract_excerpt(article):
     return text[:200] if text else ""
 
 def extract_key_evidence(text):
-    sentences = re.split(r'(?<=[.!?])\s+', text)
+    sentences = _SENTENCE_SPLIT.split(text)
     evidence = []
     for sent in sentences:
-        if (re.search(r'\b\d+(?:\.\d+)?\b', sent) and len(sent) > 50) or \
-           (re.search(r'"[^"]+"', sent) and len(sent) > 50):
+        if (_KEY_EVIDENCE_NUM.search(sent) and len(sent) > 50) or \
+           (_KEY_EVIDENCE_QUOTE.search(sent) and len(sent) > 50):
             evidence.append(sent.strip())
         if len(evidence) >= 5:
             break
     return evidence[:5]
 
 def extract_timeline(text):
-    dates = re.findall(r'\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4}\b', text)
+    dates = _TIMELINE.findall(text)
     return list(set(dates))[:5]
 
 def extract_actors(text):
-    names = re.findall(r'\b[A-Z][a-z]+ [A-Z][a-z]+\b', text)
+    names = _ACTOR_NAME.findall(text)
     unique_names = list(set(names))[:5]
-    companies = re.findall(r'\b(?:OpenAI|Anthropic|Google|Microsoft|Meta|Nvidia|Apple|Amazon|Facebook|Tesla)\b', text)
+    companies = _COMPANY.findall(text)
     all_actors = list(set(unique_names + companies))
     return all_actors[:7]
 
 def extract_technical_claims(text):
-    tech_patterns = [
-        r'\b(?:model|algorithm|architecture|training|inference|parameter|token|layer)\b',
-        r'\b\d+(?:\.\d+)?\s*%\b',
-        r'\b(?:state[- ]of[- ]the[- ]art|SOTA)\b'
-    ]
-    sentences = re.split(r'(?<=[.!?])\s+', text)
+    sentences = _SENTENCE_SPLIT.split(text)
     claims = []
     for sent in sentences:
-        if any(re.search(p, sent, re.I) for p in tech_patterns):
+        if any(p.search(sent) for p in _TECH_PATTERNS):
             claims.append(sent.strip())
         if len(claims) >= 4:
             break
     return claims[:4]
 
 def extract_business_claims(text):
-    biz_patterns = [
-        r'\b(?:revenue|profit|margin|cost|valuation|funding|investment|market)\b',
-        r'\$\d+(?:\.\d+)?\s*(?:billion|million|trillion)',
-        r'\b(?:enterprise|SaaS|subscription|licensing)\b'
-    ]
-    sentences = re.split(r'(?<=[.!?])\s+', text)
+    sentences = _SENTENCE_SPLIT.split(text)
     claims = []
     for sent in sentences:
-        if any(re.search(p, sent, re.I) for p in biz_patterns):
+        if any(p.search(sent) for p in _BIZ_PATTERNS):
             claims.append(sent.strip())
         if len(claims) >= 4:
             break
     return claims[:4]
 
 def extract_policy_claims(text):
-    policy_patterns = [
-        r'\b(?:regulation|policy|law|executive order|legislation|compliance|oversight)\b',
-        r'\b(?:government|federal|agency|white house|congress|parliament)\b'
-    ]
-    sentences = re.split(r'(?<=[.!?])\s+', text)
+    sentences = _SENTENCE_SPLIT.split(text)
     claims = []
     for sent in sentences:
-        if any(re.search(p, sent, re.I) for p in policy_patterns):
+        if any(p.search(sent) for p in _POLICY_PATTERNS):
             claims.append(sent.strip())
         if len(claims) >= 4:
             break
     return claims[:4]
 
 def find_contradictions_in_article(text):
+    sentences = _SENTENCE_SPLIT.split(text)
     contradictions = []
-    sentences = re.split(r'(?<=[.!?])\s+', text)
     for i in range(1, len(sentences)):
-        if re.search(r'\b(?:however|but|yet|nevertheless|on the other hand)\b', sentences[i], re.I):
-            if len(sentences[i-1]) > 30 and len(sentences[i]) > 30:
-                contradictions.append(f"{sentences[i-1].strip()} // {sentences[i].strip()}")
+        if _CONTRADICTION_TRANS.search(sentences[i]) and len(sentences[i-1]) > 30 and len(sentences[i]) > 30:
+            contradictions.append(f"{sentences[i-1].strip()} // {sentences[i].strip()}")
         if len(contradictions) >= 3:
             break
     return contradictions[:3]
 
 def extract_assumption_mentions(text):
+    sentences = _SENTENCE_SPLIT.split(text)
     assumptions = []
-    sentences = re.split(r'(?<=[.!?])\s+', text)
     for sent in sentences:
-        if re.search(r'\b(?:assume|presume|given that|suppose that)\b', sent, re.I):
+        if _ASSUMPTION.search(sent):
             assumptions.append(sent.strip())
         if len(assumptions) >= 2:
             break
     return assumptions[:2]
 
 def extract_blind_spot_mentions(text):
+    sentences = _SENTENCE_SPLIT.split(text)
     blind_spots = []
-    sentences = re.split(r'(?<=[.!?])\s+', text)
     for sent in sentences:
-        if re.search(r'\b(?:ignored|overlooked|failed to consider|neglected|blind spot)\b', sent, re.I):
+        if _BLIND_SPOT.search(sent):
             blind_spots.append(sent.strip())
         if len(blind_spots) >= 2:
             break
@@ -161,9 +181,9 @@ def extract_blind_spot_mentions(text):
 
 def generate_tension_indicator(article):
     text = article.get("full_text", "")
-    if re.search(r'\b(?:however|but|yet|contradiction|irony)\b', text, re.I):
+    if _TENSION_CONTRAST.search(text):
         return "Potential narrative tension detected via contrast keywords (however/but/yet)."
-    elif re.search(r'\b(?:risk|danger|threat)\b', text, re.I):
+    elif _TENSION_RISK.search(text):
         return "Risk‑related language flagged; may indicate underlying concern not fully articulated."
     else:
         return "No clear tension signals detected using simple keyword heuristics."
