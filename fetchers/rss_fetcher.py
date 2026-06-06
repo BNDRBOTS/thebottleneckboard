@@ -1,5 +1,6 @@
+# fetchers/rss_fetcher.py
 import feedparser
-from datetime import datetime
+from datetime import datetime, timezone as dt_timezone
 from newspaper import Article
 from fetchers.base import BaseFetcher
 from config import TZ, MAX_ARTICLES_PER_SOURCE, CACHE_DIR, CACHE_TTL_SECONDS, FEED_CACHE_TTL, REQUEST_TIMEOUT
@@ -36,18 +37,32 @@ def _save_cache(url, text):
     except:
         pass
 
-# ---------- feed-level cache (raw RSS/Atom content) ----------
-FEED_CACHE = {}
+# ---------- feed-level cache (persisted on disk) ----------
+def _feed_cache_path(url):
+    safe = hashlib.md5(url.encode()).hexdigest() + "_feed.json"
+    return os.path.join(CACHE_DIR, safe)
 
 def _load_feed_cache(url):
-    if url in FEED_CACHE:
-        data, ts = FEED_CACHE[url]
-        if time.time() - ts < FEED_CACHE_TTL:
-            return data
+    try:
+        path = _feed_cache_path(url)
+        if not os.path.exists(path):
+            return None
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        if time.time() - data.get('timestamp', 0) < FEED_CACHE_TTL:
+            return data['content']
+    except:
+        pass
     return None
 
 def _save_feed_cache(url, content):
-    FEED_CACHE[url] = (content, time.time())
+    try:
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        path = _feed_cache_path(url)
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump({'url': url, 'timestamp': time.time(), 'content': content}, f, ensure_ascii=False)
+    except:
+        pass
 
 class RSSFetcher(BaseFetcher):
     def fetch(self):
@@ -68,9 +83,8 @@ class RSSFetcher(BaseFetcher):
                 if pub_date is None:
                     continue
                 article_url = entry.get("link", "")
-                # Try to get full article text
                 full_text = self._extract_full_text(article_url)
-                # Fallback: use RSS summary if full_text is too short or empty
+                # Fallback: use RSS summary if full_text is too short
                 if not full_text or len(full_text.strip()) < 200:
                     summary = entry.get("summary", "")
                     if summary and len(summary.strip()) >= 200:
@@ -95,9 +109,9 @@ class RSSFetcher(BaseFetcher):
             if key in entry and entry[key]:
                 dt = datetime(*entry[key][:6])
                 if dt.tzinfo is None:
-                    dt = TZ.localize(dt)
-                else:
-                    dt = dt.astimezone(TZ)
+                    # Assume UTC if no timezone info
+                    dt = dt.replace(tzinfo=dt_timezone.utc)
+                dt = dt.astimezone(TZ)
                 return dt
         return None
 
