@@ -1,4 +1,3 @@
-# gates/free_access.py
 import tldextract
 from config import PAYWALL_DOMAINS
 
