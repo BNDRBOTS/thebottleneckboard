@@ -1,4 +1,4 @@
-import os
+import logging
 from scoring.density import DensityScorer
 from gates.relevance import is_ai_relevant
 from gates.free_access import is_free_access
@@ -6,18 +6,20 @@ from gates.length import meets_length
 from gates.same_day import is_same_day
 from config import MIN_WORD_COUNT
 
-os.makedirs("logs", exist_ok=True)
+logger = logging.getLogger(__name__)
 
 def log_rejection(article, reason):
-    with open("logs/rejections.log", "a") as f:
-        timestamp = article.get('timestamp', 'unknown')
-        source = article.get('source', 'unknown')
-        title = article.get('title', 'unknown')
-        f.write(f"{timestamp} | {source} | {title} | {reason}\n")
+    logger.info(
+        "REJECTED | %s | %s | %s",
+        article.get('source', 'unknown'),
+        article.get('title', 'unknown'),
+        reason
+    )
 
 def select_top_10(candidates, fallback_candidates):
     passed = []
     rejection_summary = []
+
     for art in candidates:
         if not is_ai_relevant(art["title"], art.get("raw_metadata", {})):
             log_rejection(art, "AI relevance gate")
