@@ -1,6 +1,5 @@
 import json
 from datetime import datetime
-from collections import defaultdict
 from config import TZ
 from output.card_builder import build_card
 
