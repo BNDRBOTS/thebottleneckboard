@@ -1,3 +1,4 @@
+# gates/free_access.py
 import tldextract
 from config import PAYWALL_DOMAINS
 
@@ -9,6 +10,4 @@ def is_free_access(url, full_text=None):
         return False
     if domain in PAYWALL_DOMAINS:
         return False
-    # No longer reject articles based on text length.
-    # The length gate will handle substantive content.
     return True
