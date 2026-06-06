@@ -1,4 +1,3 @@
-# fetchers/news_fetcher.py
 import feedparser
 from datetime import datetime, timezone as dt_timezone
 from newspaper import Article
