@@ -1,7 +1,3 @@
-```python
-# ============================================================
-# FILE: config.py
-# ============================================================
 from pytz import timezone
 
 TZ = timezone('America/Phoenix')
@@ -42,4 +38,3 @@ MAX_ARTICLES_PER_SOURCE = 20
 CACHE_DIR = "cache"
 CACHE_TTL_SECONDS = 86400       # 24h for full-text
 FEED_CACHE_TTL = 1800           # 30min for RSS/Atom feed contents
-```
