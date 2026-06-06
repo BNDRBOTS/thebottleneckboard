@@ -9,10 +9,14 @@ from config import TZ, PRIMARY_SOURCES, FALLBACK_SOURCES
 from fetchers import RSSFetcher, ArxivFetcher, NewsFetcher
 from scoring import select_top_10
 from output import generate_dashboard_json
-
 import concurrent.futures
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(name)s: %(message)s',
+    handlers=[logging.StreamHandler()]
+)
+
 app = Flask(__name__)
 
 cached_dashboard = None
