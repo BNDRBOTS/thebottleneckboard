@@ -2,8 +2,8 @@ from pytz import timezone
 
 TZ = timezone('America/Phoenix')
 
-MIN_WORD_COUNT = 900
-MIN_CHAR_COUNT = 5000
+MIN_WORD_COUNT = 250
+MIN_CHAR_COUNT = 1500
 
 PRIMARY_SOURCES = {
     "OpenAI": "https://openai.com/news/rss.xml",
